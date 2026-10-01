@@ -1,0 +1,6 @@
+{
+  "name": "Goutte d’Or & Vous",
+  "description": "La boussole du quartier de la Goutte d'Or - Média participatif, agenda culturel, annuaire des structures et espace d'engagement porté par la Salle Saint-Bruno.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

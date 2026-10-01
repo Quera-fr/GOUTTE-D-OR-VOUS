@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: 'Fraunces', serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --color-warm-cream: #FAF7EE;
+  --color-warm-olive: #C9D48D;
+  --color-goutte-brown: #4A1E0E;
+  --color-goutte-coral: #DF6847;
+  --color-goutte-green: #284B3D;
+  --color-goutte-orange: #F05727;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #FAF7EE;
+  color: #292524;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .font-serif-title {
+  font-family: 'Fraunces', serif;
+}
+
+/* Custom scrollbars for clean timeline & directory */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F3EEDB;
+}
+::-webkit-scrollbar-thumb {
+  background: #D2C4A7;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B8A684;
+}
+
