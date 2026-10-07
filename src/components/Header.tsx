@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Language, ActiveView } from '../types';
+import { Language, ActiveView, User } from '../types';
 import { translations } from '../data/translations';
-import { Compass, Globe, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Compass, Globe, ChevronDown, User as UserIcon, Shield, LogOut, Building } from 'lucide-react';
 
 interface HeaderProps {
   currentLang: Language;
   onSelectLang: (lang: Language) => void;
   activeView: ActiveView;
   onNavigate: (view: ActiveView) => void;
+  currentUser: User | null;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,9 +17,12 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectLang,
   activeView,
   onNavigate,
+  currentUser,
+  onLogout,
 }) => {
   const t = translations[currentLang];
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const languages: { code: Language; label: string }[] = [
     { code: 'fr', label: 'Français' },
@@ -30,19 +35,8 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="w-full bg-[#FAF7EE] border-b border-[#E7DECD] sticky top-0 z-40 px-4 md:px-8 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand Lockup */}
+        {/* Brand Lockup (No 'retour à l'accueil' button as requested) */}
         <div className="flex items-center gap-3">
-          {activeView !== 'home' && activeView !== 'hero' && (
-            <button
-              onClick={() => onNavigate('home')}
-              className="flex items-center gap-1.5 text-xs font-semibold text-[#4A1E0E] hover:text-[#DF6847] bg-[#F2EBD9] hover:bg-[#EBE2CD] px-3 py-1.5 rounded-full transition-colors cursor-pointer mr-1"
-              title={t.backToHome}
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t.backToHome}</span>
-            </button>
-          )}
-
           <button
             onClick={() => onNavigate('home')}
             className="flex items-center gap-2 group text-left cursor-pointer"
@@ -114,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         )}
 
-        {/* Actions & Language Switcher */}
+        {/* Actions, Auth & Language Switcher (Order: Compass | Language | Auth/Account) */}
         <div className="flex items-center gap-2">
           {/* Compass / Hero view toggle */}
           <button
@@ -128,10 +122,13 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
-          {/* Language Selector Dropdown matching Mockup */}
+          {/* Language Selector Dropdown */}
           <div className="relative">
             <button
-              onClick={() => setLangMenuOpen(!langMenuOpen)}
+              onClick={() => {
+                setLangMenuOpen(!langMenuOpen);
+                setUserMenuOpen(false);
+              }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#4A1E0E] bg-[#FAF7EE] hover:bg-[#F2EBD9] border border-[#DF6847] rounded-full transition-all cursor-pointer shadow-2xs"
               aria-expanded={langMenuOpen}
               aria-label="Sélectionner la langue"
@@ -162,8 +159,94 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
+
+          {/* Auth / Account Button (Placed next to Boussole and Langue) */}
+          <div className="relative">
+            {currentUser ? (
+              <button
+                onClick={() => {
+                  setUserMenuOpen(!userMenuOpen);
+                  setLangMenuOpen(false);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-[#FAF7EE] bg-[#284B3D] hover:bg-[#1E392E] rounded-full transition-all cursor-pointer shadow-xs"
+              >
+                {currentUser.role === 'admin' ? (
+                  <Shield className="w-3.5 h-3.5 text-[#F9DE96]" />
+                ) : currentUser.role === 'association' ? (
+                  <Building className="w-3.5 h-3.5 text-[#F9DE96]" />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-[#F9DE96]" />
+                )}
+                <span className="max-w-[100px] truncate">{currentUser.name}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+            ) : (
+              <button
+                onClick={() => onNavigate('login')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#FAF7EE] bg-[#4A1E0E] hover:bg-[#DF6847] rounded-full transition-all cursor-pointer shadow-xs"
+              >
+                <UserIcon className="w-3.5 h-3.5" />
+                <span>Connexion / Inscription</span>
+              </button>
+            )}
+
+            {/* User Profile Dropdown Menu */}
+            {userMenuOpen && currentUser && (
+              <div className="absolute right-0 mt-1.5 w-52 bg-[#FAF7EE] border border-[#284B3D] rounded-2xl shadow-xl p-2 z-50 flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-2 border-b border-[#E7DECD] bg-[#F2EBD9] rounded-xl">
+                  <div className="font-bold text-xs text-[#4A1E0E] truncate">{currentUser.name}</div>
+                  <div className="text-[10px] text-[#786E5D] truncate">{currentUser.email}</div>
+                  <div className="mt-1">
+                    <span className="inline-block px-2 py-0.5 text-[9px] font-bold uppercase rounded-full bg-[#DF6847] text-white">
+                      {currentUser.role === 'admin'
+                        ? 'Administrateur'
+                        : currentUser.role === 'association'
+                        ? 'Association'
+                        : 'Habitant'}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    onNavigate('myAccount');
+                    setUserMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#4A1E0E] hover:bg-[#F2EBD9] transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  <UserIcon className="w-4 h-4 text-[#284B3D]" />
+                  <span>Mon Compte</span>
+                </button>
+
+                {currentUser.role === 'admin' && (
+                  <button
+                    onClick={() => {
+                      onNavigate('admin');
+                      setUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-[#4A1E0E] hover:bg-[#F2EBD9] transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <Shield className="w-4 h-4 text-[#DF6847]" />
+                    <span>Espace Administration</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    onLogout();
+                    setUserMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-red-700 hover:bg-red-50 transition-colors flex items-center gap-2 cursor-pointer border-t border-[#E7DECD]"
+                >
+                  <LogOut className="w-4 h-4 text-red-600" />
+                  <span>Déconnexion</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
   );
 };
+

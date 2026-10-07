@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { AgendaEvent, Language } from '../types';
+import { AgendaEvent, Language, User } from '../types';
 import { translations } from '../data/translations';
-import { mockAgendaEvents } from '../data/mockData';
+import { DatabaseService } from '../services/dbService';
 import { Plus, Undo2, Calendar, MapPin, Clock, PlusCircle } from 'lucide-react';
 
 interface AgendaViewProps {
   currentLang: Language;
   onOpenSubmitEventModal: () => void;
   initialExpandedEventId?: string | null;
+  currentUser?: User | null;
 }
 
 export const AgendaView: React.FC<AgendaViewProps> = ({
   currentLang,
   onOpenSubmitEventModal,
   initialExpandedEventId,
+  currentUser,
 }) => {
   const t = translations[currentLang];
   const [selectedMonth, setSelectedMonth] = useState<'Septembre' | 'Octobre' | 'Novembre' | 'Décembre'>('Septembre');
@@ -27,8 +29,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
     'Décembre',
   ];
 
-  const currentEvents = mockAgendaEvents.filter((ev) => ev.month === selectedMonth);
-  const expandedEvent = mockAgendaEvents.find((ev) => ev.id === expandedEventId);
+  const allEvents = DatabaseService.getEvents();
+  const currentEvents = allEvents.filter((ev) => ev.month === selectedMonth);
+  const expandedEvent = allEvents.find((ev) => ev.id === expandedEventId);
 
   // Card color styling map matching mockups
   const cardColorClasses = {
@@ -48,6 +51,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
     beige: 'bg-[#E4D9C8] text-[#3D3528]',
     olive: 'bg-[#C9D48D] text-[#303816]',
   };
+
+  const canProposeEvent = currentUser && (currentUser.role === 'association' || currentUser.role === 'admin');
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-4 sm:py-6 flex flex-col gap-6 animate-in fade-in duration-300">
@@ -99,15 +104,18 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           )}
         </div>
 
-        {/* Propose an Event CTA */}
-        <button
-          onClick={onOpenSubmitEventModal}
-          className="flex items-center gap-1.5 bg-[#4A1E0E] hover:bg-[#341408] text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-full shadow-xs transition-all cursor-pointer"
-        >
-          <PlusCircle className="w-4 h-4 text-[#C9D48D]" />
-          <span>{t.submitEvent}</span>
-        </button>
+        {/* Propose an Event CTA (Visible ONLY IF connected as association or admin) */}
+        {canProposeEvent && (
+          <button
+            onClick={onOpenSubmitEventModal}
+            className="flex items-center gap-1.5 bg-[#4A1E0E] hover:bg-[#341408] text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-full shadow-xs transition-all cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4 text-[#C9D48D]" />
+            <span>{t.submitEvent}</span>
+          </button>
+        )}
       </div>
+
 
       {/* Main Interactive Timeline / Sinuous Path View */}
       <div className="relative w-full py-8 overflow-x-auto min-h-[640px] flex items-center justify-center">
@@ -233,10 +241,16 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           </div>
         </div>
 
-        {/* EXPANDED DETAILED CARD OVERLAY (matching Mockup Page 8 & 9) */}
+        {/* EXPANDED DETAILED CARD OVERLAY WITH CLICK-OUTSIDE BACKDROP */}
         {expandedEvent && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-            <div className="relative bg-[#FAF7EE] max-w-xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-white my-8 max-h-[90vh] overflow-y-auto">
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200"
+            onClick={() => setExpandedEventId(null)} // Click in empty space closes card!
+          >
+            <div
+              className="relative bg-[#FAF7EE] max-w-xl w-full rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-white my-8 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()} // Prevent click inside card from closing it
+            >
               {/* Inner card with color theme background */}
               <div
                 className={`w-full rounded-2xl p-6 sm:p-8 relative ${

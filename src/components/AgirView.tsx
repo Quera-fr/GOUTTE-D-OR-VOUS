@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { AgirFilter, AgirOpportunity, Language } from '../types';
+import { AgirFilter, AgirOpportunity, Language, User } from '../types';
 import { translations } from '../data/translations';
-import { mockAgirOpportunities } from '../data/mockData';
+import { DatabaseService } from '../services/dbService';
 import { Search, SlidersHorizontal, Check, X, Send, HeartHandshake, Briefcase, PlusCircle } from 'lucide-react';
 
 interface AgirViewProps {
   currentLang: Language;
   onOpenPostOfferModal: () => void;
+  currentUser?: User | null;
 }
 
-export const AgirView: React.FC<AgirViewProps> = ({ currentLang, onOpenPostOfferModal }) => {
+export const AgirView: React.FC<AgirViewProps> = ({ currentLang, onOpenPostOfferModal, currentUser }) => {
   const t = translations[currentLang];
   const [searchQuery, setSearchQuery] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -38,7 +39,9 @@ export const AgirView: React.FC<AgirViewProps> = ({ currentLang, onOpenPostOffer
     }
   };
 
-  const filteredOpportunities = mockAgirOpportunities.filter((opp) => {
+  const opportunitiesList = DatabaseService.getPosts();
+
+  const filteredOpportunities = opportunitiesList.filter((opp) => {
     // Filter by type
     if (activeFilters.length > 0 && !activeFilters.includes(opp.type)) {
       return false;
@@ -68,6 +71,8 @@ export const AgirView: React.FC<AgirViewProps> = ({ currentLang, onOpenPostOffer
     }, 2200);
   };
 
+  const canPostOffer = currentUser && (currentUser.role === 'association' || currentUser.role === 'admin');
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-4 sm:py-6 flex flex-col gap-6 animate-in fade-in duration-300">
       {/* Dark Green Header Banner matching Mockup Page 17 */}
@@ -82,8 +87,22 @@ export const AgirView: React.FC<AgirViewProps> = ({ currentLang, onOpenPostOffer
         </div>
       </div>
 
+      {/* Action Bar (Identical positioning & styling as Agenda 'Proposer un événement') */}
+      {canPostOffer && (
+        <div className="flex justify-end relative z-20">
+          <button
+            onClick={onOpenPostOfferModal}
+            className="flex items-center gap-1.5 bg-[#4A1E0E] hover:bg-[#341408] text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-full shadow-xs transition-all cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4 text-[#C9D48D]" />
+            <span>{t.postOffer}</span>
+          </button>
+        </div>
+      )}
+
       {/* Search Input Bar + Filter Toggle Icon matching Mockup Page 17 & 18 */}
       <div className="relative max-w-2xl mx-auto w-full z-20">
+
         <div className="relative flex items-center">
           <input
             type="text"

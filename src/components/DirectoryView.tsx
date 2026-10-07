@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DirectoryCategory, DirectoryStructure, Language } from '../types';
 import { translations } from '../data/translations';
-import { mockDirectoryStructures } from '../data/mockData';
+import { DatabaseService } from '../services/dbService';
+import { geocodeAddress } from '../utils/geocoding';
+import { LeafletMap } from './LeafletMap';
 import {
   Activity,
   Drama,
@@ -17,6 +19,8 @@ import {
   ArrowLeft,
   X,
   Layers,
+  Building,
+  ExternalLink,
 } from 'lucide-react';
 
 interface DirectoryViewProps {
@@ -29,6 +33,43 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ currentLang }) => 
   const [activePin, setActivePin] = useState<DirectoryStructure | null>(null);
   const [fullSheetStructure, setFullSheetStructure] = useState<DirectoryStructure | null>(null);
 
+  const [associationsList, setAssociationsList] = useState<DirectoryStructure[]>([]);
+
+  const fetchAssociations = () => {
+    fetch('/api/associations')
+      .then((res) => res.json())
+      .then((data) => {
+        const rawList = Array.isArray(data) && data.length > 0 ? data : DatabaseService.getAssociations();
+        const processed = rawList.map((item: DirectoryStructure) => {
+          const geo = geocodeAddress(item.address || item.name);
+          return {
+            ...item,
+            lat: item.lat || geo.lat,
+            lng: item.lng || geo.lng,
+            mapCoords: item.mapCoords || { x: geo.x, y: geo.y },
+          };
+        });
+        setAssociationsList(processed);
+      })
+      .catch(() => {
+        const rawList = DatabaseService.getAssociations();
+        const processed = rawList.map((item: DirectoryStructure) => {
+          const geo = geocodeAddress(item.address || item.name);
+          return {
+            ...item,
+            lat: item.lat || geo.lat,
+            lng: item.lng || geo.lng,
+            mapCoords: item.mapCoords || { x: geo.x, y: geo.y },
+          };
+        });
+        setAssociationsList(processed);
+      });
+  };
+
+  useEffect(() => {
+    fetchAssociations();
+  }, []);
+
   const categories: { id: DirectoryCategory; label: string; icon: React.ReactNode }[] = [
     { id: 'all', label: t.allCategories, icon: <Layers className="w-4 h-4" /> },
     { id: 'sante', label: t.catSante, icon: <Activity className="w-4 h-4" /> },
@@ -39,29 +80,10 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ currentLang }) => 
     { id: 'maison_assoc', label: t.catMaisonAssoc, icon: <Home className="w-4 h-4" /> },
   ];
 
-  const filteredStructures = mockDirectoryStructures.filter((s) => {
+  const filteredStructures = associationsList.filter((s) => {
     if (selectedCategory === 'all') return true;
     return s.category === selectedCategory;
   });
-
-  const getCategoryIcon = (cat: DirectoryCategory) => {
-    switch (cat) {
-      case 'sante':
-        return <Activity className="w-4 h-4 text-rose-500" />;
-      case 'culture':
-        return <Drama className="w-4 h-4 text-amber-600" />;
-      case 'jeunesse':
-        return <Baby className="w-4 h-4 text-emerald-600" />;
-      case 'education':
-        return <GraduationCap className="w-4 h-4 text-blue-600" />;
-      case 'sport':
-        return <Trophy className="w-4 h-4 text-orange-600" />;
-      case 'maison_assoc':
-        return <Home className="w-4 h-4 text-purple-600" />;
-      default:
-        return <MapPin className="w-4 h-4 text-[#DF6847]" />;
-    }
-  };
 
   // If Full Sheet View is opened (matching Mockup Page 13)
   if (fullSheetStructure) {
@@ -94,6 +116,13 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ currentLang }) => 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-2">
           {/* Big Title on Left Column */}
           <div className="lg:col-span-3">
+            {fullSheetStructure.logo && (
+              <img
+                src={fullSheetStructure.logo}
+                alt={fullSheetStructure.name}
+                className="w-20 h-20 rounded-2xl object-cover border-2 border-[#E4D9C3] mb-3 shadow-xs"
+              />
+            )}
             <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black text-[#4A1E0E] uppercase leading-tight tracking-tight">
               {fullSheetStructure.name}
             </h1>
@@ -101,7 +130,7 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ currentLang }) => 
               {fullSheetStructure.categoryLabel}
             </p>
             <p className="mt-3 text-xs text-[#786E5D] leading-relaxed">
-              {fullSheetStructure.address}
+              📍 {fullSheetStructure.address}
             </p>
           </div>
 
@@ -194,9 +223,9 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ currentLang }) => 
         </div>
       </div>
 
-      {/* Main Layout: Sidebar Categories on Left + Stylized Interactive Map on Right */}
+      {/* Main Layout: Sidebar Categories on Left + Real OpenStreetMap Leaflet Map on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Category Selector with icons matching Mockup Page 11 */}
+        {/* Left Category Selector */}
         <div className="lg:col-span-3 bg-[#FAF7EE] rounded-3xl p-4 sm:p-5 border border-[#E4D9C3] shadow-xs flex flex-col gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-[#786E5D] mb-1 px-2">
             Thématiques
@@ -219,173 +248,97 @@ export const DirectoryView: React.FC<DirectoryViewProps> = ({ currentLang }) => 
           ))}
         </div>
 
-        {/* Interactive Stylized Neighborhood Map Container */}
-        <div className="lg:col-span-9 relative bg-[#EFEAD9] rounded-3xl p-4 sm:p-6 border border-[#E0D5BE] shadow-md overflow-hidden min-h-[540px]">
-          {/* Street Labels & Visual Grid */}
-          <div className="absolute top-4 left-6 text-[11px] font-bold tracking-wider text-[#756854] uppercase pointer-events-none">
-            Plan interactif · Quartier Goutte d'Or (Paris 18e)
+        {/* Real OpenStreetMap Leaflet Map Component (Paris 18e) */}
+        <div className="lg:col-span-9">
+          <div className="mb-2 text-xs font-bold text-[#4A1E0E] flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-[#DF6847]" />
+              <span>Carte interactive OpenStreetMap · Goutte d'Or (Paris 18e)</span>
+            </span>
+            <span className="text-[#786E5D] text-[11px] font-normal">
+              Cliquez sur les marqueurs ou dans le vide pour fermer la fiche
+            </span>
           </div>
 
-          {/* Stylized Vector Urban Blocks representing Goutte d'Or street grid */}
-          <svg viewBox="0 0 900 600" className="w-full h-full min-h-[500px]" preserveAspectRatio="xMidYMid meet">
-            <defs>
-              <pattern id="streetGrid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <rect width="60" height="60" fill="#ECE5D4" />
-                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#E2DAC6" strokeWidth="1" />
-              </pattern>
-            </defs>
+          <LeafletMap
+            associations={filteredStructures}
+            selectedAssociation={activePin}
+            onSelectAssociation={setActivePin}
+            onOpenFullSheet={setFullSheetStructure}
+          />
+        </div>
+      </div>
 
-            {/* Background base ground */}
-            <rect width="900" height="600" fill="url(#streetGrid)" />
+      {/* Directory Associations Grid Cards List */}
+      <div className="mt-8">
+        <h3 className="font-serif text-2xl font-bold text-[#4A1E0E] mb-4 flex items-center gap-2">
+          <Building className="w-6 h-6 text-[#284B3D]" />
+          <span>Toutes les associations du quartier ({filteredStructures.length})</span>
+        </h3>
 
-            {/* Stylized colored city blocks in warm yellow, green, terracotta palette matching Mockup Page 11 */}
-            {/* Boulevard Barbès on left */}
-            <rect x="30" y="30" width="100" height="540" fill="#E4DBC5" stroke="#D3C7AB" strokeWidth="2" />
-            <text x="80" y="300" transform="rotate(-90 80,300)" fill="#93846C" fontSize="12" fontWeight="bold" textAnchor="middle" letterSpacing="3">BOULEVARD BARBÈS</text>
-
-            {/* Block 1 (North-West) */}
-            <polygon points="150,50 320,50 320,170 150,170" fill="#F2CD60" rx="12" />
-            <polygon points="160,60 230,60 230,160 160,160" fill="#DF6847" />
-            <polygon points="240,60 310,60 310,110 240,110" fill="#C5D285" />
-            <polygon points="240,120 310,120 310,160 240,160" fill="#284B3D" />
-
-            {/* Block 2 (Center-North: Rue de la Goutte d'Or & Rue Polonceau) */}
-            <polygon points="340,50 510,50 490,170 340,170" fill="#C5D285" />
-            <polygon points="350,60 410,60 410,160 350,160" fill="#F2CD60" />
-            <polygon points="420,60 490,60 480,160 420,160" fill="#DF6847" />
-
-            {/* Block 3 (North-East: Rue Stephenson & Rue Fleury) */}
-            <polygon points="530,50 860,50 860,170 550,170" fill="#F2CD60" />
-            <polygon points="550,60 680,60 670,160 550,160" fill="#284B3D" />
-            <polygon points="690,60 850,60 850,160 690,160" fill="#DF6847" />
-
-            {/* Wide Street: Rue de la Goutte d'Or */}
-            <line x1="140" y1="185" x2="880" y2="185" stroke="#FFFFFF" strokeWidth="24" strokeLinecap="round" />
-            <text x="500" y="190" fill="#93846C" fontSize="10" fontWeight="bold" textAnchor="middle" letterSpacing="2">RUE DE LA GOUTTE D'OR</text>
-
-            {/* Block 4 (West-Center: Château Rouge area) */}
-            <polygon points="150,210 320,210 320,380 150,380" fill="#F2CD60" />
-            <circle cx="235" cy="295" r="55" fill="#FDF3CF" />
-            <polygon points="190,260 280,260 260,330 210,330" fill="#DF6847" />
-
-            {/* Block 5 (Center: Square Léon & Place Saint-Bernard) */}
-            <polygon points="340,210 510,210 510,380 340,380" fill="#C5D285" />
-            <polygon points="350,220 420,220 420,370 350,370" fill="#DF6847" />
-            <polygon points="430,220 500,220 500,290 430,290" fill="#284B3D" />
-            <polygon points="430,300 500,300 500,370 430,370" fill="#F2CD60" />
-
-            {/* Block 6 (East: Rue Saint-Luc & Rue Affre) */}
-            <polygon points="530,210 860,210 860,380 530,380" fill="#F2CD60" />
-            <polygon points="550,220 630,220 630,370 550,370" fill="#284B3D" />
-            <polygon points="640,220 730,220 730,370 640,370" fill="#DF6847" />
-            <polygon points="740,220 850,220 850,370 740,370" fill="#C5D285" />
-
-            {/* Wide Street: Rue Polonceau */}
-            <line x1="140" y1="395" x2="880" y2="395" stroke="#FFFFFF" strokeWidth="22" strokeLinecap="round" />
-            <text x="500" y="400" fill="#93846C" fontSize="10" fontWeight="bold" textAnchor="middle" letterSpacing="2">RUE POLONCEAU</text>
-
-            {/* Block 7 (South-West: Rue de la Charbonnière) */}
-            <polygon points="150,420 320,420 320,570 150,570" fill="#DF6847" />
-            <polygon points="160,430 230,430 230,560 160,560" fill="#F2CD60" />
-            <polygon points="240,430 310,430 310,560 240,560" fill="#284B3D" />
-
-            {/* Block 8 (South-Center: Salle Saint-Bruno & Church) */}
-            <polygon points="340,420 510,420 510,570 340,570" fill="#C5D285" />
-            <polygon points="350,430 420,430 420,560 350,560" fill="#F2CD60" />
-            <polygon points="430,430 500,430 500,560 430,560" fill="#DF6847" />
-
-            {/* Block 9 (South-East: Doudeauville) */}
-            <polygon points="530,420 860,420 860,570 530,570" fill="#F2CD60" />
-            <polygon points="550,430 650,430 650,560 550,560" fill="#284B3D" />
-            <polygon points="660,430 750,430 750,560 660,560" fill="#DF6847" />
-            <polygon points="760,430 850,430 850,560 760,560" fill="#C5D285" />
-          </svg>
-
-          {/* Interactive HTML Pins rendered exactly on map coordinates */}
-          {filteredStructures.map((struct) => {
-            const isSelected = activePin?.id === struct.id;
-            return (
-              <div
-                key={struct.id}
-                style={{ left: `${struct.mapCoords.x}%`, top: `${struct.mapCoords.y}%` }}
-                className="absolute -translate-x-1/2 -translate-y-full z-20 cursor-pointer group"
-                onClick={() => setActivePin(struct)}
-              >
-                {/* Pin Pill Label */}
-                <div
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-lg border-2 transition-all duration-200 transform group-hover:scale-110 ${
-                    isSelected
-                      ? 'bg-[#4A1E0E] text-white border-white scale-110 ring-4 ring-[#DF6847]/40'
-                      : 'bg-white/95 text-[#302823] border-[#DF6847] hover:bg-white'
-                  }`}
-                >
-                  <span className="p-0.5">{getCategoryIcon(struct.category)}</span>
-                  <span className="text-[11px] font-bold whitespace-nowrap">{struct.name}</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredStructures.map((assoc) => (
+            <div
+              key={assoc.id}
+              className="bg-[#FAF7EE] border-2 border-[#E7DECD] rounded-2xl p-5 shadow-xs hover:border-[#DF6847] hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3">
+                    {assoc.logo ? (
+                      <img src={assoc.logo} alt={assoc.name} className="w-12 h-12 rounded-xl object-cover border border-[#E7DECD]" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-[#DF6847]/15 flex items-center justify-center text-[#DF6847]">
+                        <Building className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-sm text-[#4A1E0E] leading-tight">{assoc.name}</h4>
+                      <span className="text-[10px] font-bold text-[#DF6847] uppercase tracking-wider">
+                        {assoc.categoryLabel}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Pointy tip of pin */}
-                <div className="w-2.5 h-2.5 bg-[#DF6847] rotate-45 mx-auto -mt-1 shadow-xs" />
-              </div>
-            );
-          })}
-
-          {/* FLOATING POPUP CARD (matching Mockup Page 12 & 14) */}
-          {activePin && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-full max-w-sm bg-[#FAF7EE] rounded-3xl p-5 sm:p-6 shadow-2xl border-4 border-white animate-in zoom-in-95 duration-200">
-              <button
-                onClick={() => setActivePin(null)}
-                className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#EFE8D6] hover:bg-[#E2D8C0] flex items-center justify-center text-[#4A1E0E] cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Category Icon Badge in colored rounded pill */}
-              <div className="w-12 h-12 rounded-2xl bg-[#DF6847]/15 flex items-center justify-center mb-3">
-                {getCategoryIcon(activePin.category)}
-              </div>
-
-              {/* Title & Street Address */}
-              <h3 className="font-serif text-xl sm:text-2xl font-black text-[#4A1E0E] leading-tight">
-                {activePin.name}
-              </h3>
-              <p className="text-xs text-[#786E5D] font-medium mt-1">
-                {activePin.address}
-              </p>
-
-              {/* Details List */}
-              <div className="mt-4 space-y-2.5 text-xs text-[#3D352E]">
-                <div>
-                  <span className="font-bold text-[#4A1E0E] block">{t.publicLabel} :</span>
-                  <span className="text-[#63574A]">{activePin.publicCible}</span>
-                </div>
-
-                <div>
-                  <span className="font-bold text-[#4A1E0E] block">{t.hoursLabel} :</span>
-                  <span className="text-[#63574A]">{activePin.horaires}</span>
-                </div>
-
-                <div>
-                  <span className="font-bold text-[#4A1E0E] block">{t.contactLabel} :</span>
-                  <span className="text-[#63574A] block">{activePin.phone}</span>
-                  <span className="text-[#63574A] block">{activePin.email}</span>
+                <div className="space-y-2 text-xs text-[#5C5042] mt-2">
+                  <div className="flex items-start gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-[#DF6847] shrink-0 mt-0.5" />
+                    <span>{assoc.address}</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#284B3D] shrink-0 mt-0.5" />
+                    <span>{assoc.horaires}</span>
+                  </div>
+                  {assoc.publicCible && (
+                    <div className="text-[11px] bg-[#F2EBD9] px-2.5 py-1 rounded-lg text-[#4A1E0E] font-medium mt-1">
+                      Public : {assoc.publicCible}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Open Full Sheet button (+) matching Mockup Page 12 & 14 */}
-              <div className="mt-5 flex justify-end">
+              <div className="mt-4 pt-3 border-t border-[#E7DECD] flex justify-between items-center">
                 <button
                   onClick={() => {
-                    setFullSheetStructure(activePin);
-                    setActivePin(null);
+                    setActivePin(assoc);
+                    window.scrollTo({ top: 300, behavior: 'smooth' });
                   }}
-                  className="w-10 h-10 rounded-full bg-[#DF6847] hover:bg-[#BA4E30] text-white flex items-center justify-center shadow-md transform hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                  title={t.fullSheet}
+                  className="text-xs font-bold text-[#DF6847] hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  <Plus className="w-5 h-5 stroke-[2.5]" />
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Voir sur la carte</span>
+                </button>
+                <button
+                  onClick={() => setFullSheetStructure(assoc)}
+                  className="px-3 py-1.5 bg-[#4A1E0E] hover:bg-[#34150A] text-white text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer shadow-xs"
+                >
+                  <span>Fiche détaillée</span>
+                  <ExternalLink className="w-3 h-3" />
                 </button>
               </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </div>

@@ -1,6 +1,46 @@
 export type Language = 'fr' | 'en' | 'ar' | 'uk' | 'ps';
 
-export type ActiveView = 'hero' | 'home' | 'media' | 'agenda' | 'annuaire' | 'agir';
+export type ActiveView =
+  | 'hero'
+  | 'home'
+  | 'media'
+  | 'agenda'
+  | 'annuaire'
+  | 'agir'
+  | 'login'
+  | 'myAccount'
+  | 'admin'
+  | 'createArticle';
+
+export type UserRole = 'admin' | 'association' | 'user';
+export type UserStatus = 'approved' | 'pending';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  status: UserStatus;
+  associationId?: string;
+}
+
+export interface Comment {
+  id: string;
+  articleId: string;
+  userId: string;
+  authorName: string;
+  content: string;
+  date: string;
+  status: 'approved' | 'pending';
+}
+
+export type ArticleCategory =
+  | 'Tous'
+  | 'Articles'
+  | 'WebTV'
+  | 'Web Radio'
+  | 'Archives Goutte d\'Or'
+  | 'Devenir bénévole';
 
 export interface ArticleItem {
   id: string;
@@ -11,10 +51,11 @@ export interface ArticleItem {
   durationOrReadTime: string;
   image: string;
   date: string;
-  category: string;
+  category: ArticleCategory | string;
   content: string;
   audioUrl?: string;
   videoUrl?: string;
+  comments?: Comment[];
 }
 
 export interface AgendaEvent {
@@ -31,6 +72,8 @@ export interface AgendaEvent {
   time?: string;
   organizer?: string;
   tag?: string;
+  associationId?: string;
+  status?: 'approved' | 'pending';
 }
 
 export type DirectoryCategory =
@@ -45,6 +88,7 @@ export type DirectoryCategory =
 export interface DirectoryStructure {
   id: string;
   name: string;
+  logo?: string;
   category: DirectoryCategory;
   categoryLabel: string;
   address: string;
@@ -53,11 +97,16 @@ export interface DirectoryStructure {
   phone: string;
   email: string;
   website?: string;
+  thematique?: string;
+  contact?: string;
   mapCoords: { x: number; y: number }; // percentage on stylized map
+  lat?: number;
+  lng?: number;
   histoire: string;
   activites: string;
   fonctionnement: string;
   contactsDetails: string;
+  status?: 'approved' | 'pending';
 }
 
 export type AgirFilter = 'benevolat' | 'emploi' | 'volontariat' | 'mecenat';
@@ -76,4 +125,7 @@ export interface AgirOpportunity {
   description: string;
   requirements: string[];
   contactEmail: string;
+  associationId?: string;
+  status?: 'approved' | 'pending';
 }
+

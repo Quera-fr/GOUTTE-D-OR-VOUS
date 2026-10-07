@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ActiveView, Language } from './types';
+import { ActiveView, Language, User } from './types';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HeroScreen } from './components/HeroScreen';
@@ -13,12 +13,25 @@ import { MediaView } from './components/MediaView';
 import { AgendaView } from './components/AgendaView';
 import { DirectoryView } from './components/DirectoryView';
 import { AgirView } from './components/AgirView';
+import { LoginView } from './components/LoginView';
+import { MyAccountView } from './components/MyAccountView';
+import { AdminView } from './components/AdminView';
 import { Modals } from './components/Modals';
 
 export default function App() {
   const [currentLang, setCurrentLang] = useState<Language>('fr');
   const [activeView, setActiveView] = useState<ActiveView>('home');
   const [targetEventId, setTargetEventId] = useState<string | null>(null);
+
+  // User Authentication state with localStorage persistence
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('goutte_dor_current_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   const [activeModal, setActiveModal] = useState<
     'about' | 'faq' | 'newsletter' | 'contact' | 'submitEvent' | 'postOffer' | 'volunteer' | null
@@ -31,6 +44,29 @@ export default function App() {
     document.documentElement.setAttribute('lang', currentLang);
   }, [currentLang]);
 
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem('goutte_dor_current_user', JSON.stringify(user));
+    if (user.role === 'admin') {
+      setActiveView('admin');
+    } else if (user.role === 'association') {
+      setActiveView('myAccount');
+    } else {
+      setActiveView('home');
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('goutte_dor_current_user');
+    setActiveView('home');
+  };
+
+  const handleUpdateUser = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem('goutte_dor_current_user', JSON.stringify(updatedUser));
+  };
+
   const handleOpenFeaturedEvent = (eventId: string) => {
     setTargetEventId(eventId);
     setActiveView('agenda');
@@ -38,12 +74,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FAF7EE] text-[#292524] flex flex-col font-sans selection:bg-[#DF6847] selection:text-white">
-      {/* Top Bar Header with Logo & Language Switcher */}
+      {/* Top Bar Header with Logo, Navigation & User Auth */}
       <Header
         currentLang={currentLang}
         onSelectLang={setCurrentLang}
         activeView={activeView}
         onNavigate={setActiveView}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area based on activeView */}
@@ -67,6 +105,8 @@ export default function App() {
           <MediaView
             currentLang={currentLang}
             onOpenVolunteerModal={() => setActiveModal('volunteer')}
+            currentUser={currentUser}
+            onNavigate={setActiveView}
           />
         )}
 
@@ -75,6 +115,7 @@ export default function App() {
             currentLang={currentLang}
             onOpenSubmitEventModal={() => setActiveModal('submitEvent')}
             initialExpandedEventId={targetEventId}
+            currentUser={currentUser}
           />
         )}
 
@@ -86,6 +127,29 @@ export default function App() {
           <AgirView
             currentLang={currentLang}
             onOpenPostOfferModal={() => setActiveModal('postOffer')}
+            currentUser={currentUser}
+          />
+        )}
+
+        {activeView === 'login' && (
+          <LoginView
+            onLoginSuccess={handleLoginSuccess}
+            onNavigate={setActiveView}
+          />
+        )}
+
+        {activeView === 'myAccount' && currentUser && (
+          <MyAccountView
+            currentUser={currentUser}
+            onNavigate={setActiveView}
+            onUpdateUser={handleUpdateUser}
+          />
+        )}
+
+        {(activeView === 'admin' || activeView === 'createArticle') && currentUser && (
+          <AdminView
+            currentUser={currentUser}
+            onNavigate={setActiveView}
           />
         )}
       </main>

@@ -1,28 +1,66 @@
-import React, { useState } from 'react';
-import { ArticleItem, Language } from '../types';
+import React, { useState, useEffect } from 'react';
+import { ArticleItem, Language, User, ArticleCategory, Comment, ActiveView } from '../types';
 import { translations } from '../data/translations';
-import { mockArticles } from '../data/mockData';
-import { Play, Pause, Volume2, Film, BookOpen, Clock, X, MessageSquare, Send } from 'lucide-react';
+import { DatabaseService } from '../services/dbService';
+import { Play, Pause, Volume2, Film, BookOpen, Clock, X, MessageSquare, Send, CheckCircle2, User as UserIcon } from 'lucide-react';
 
 interface MediaViewProps {
   currentLang: Language;
   onOpenVolunteerModal: () => void;
+  currentUser?: User | null;
+  onNavigate?: (view: ActiveView) => void;
 }
 
-export const MediaView: React.FC<MediaViewProps> = ({ currentLang, onOpenVolunteerModal }) => {
+export const MediaView: React.FC<MediaViewProps> = ({
+  currentLang,
+  onOpenVolunteerModal,
+  currentUser,
+  onNavigate,
+}) => {
   const t = translations[currentLang];
-  const [activeTab, setActiveTab] = useState<'all' | 'Article' | 'Podcast' | 'Web TV' | 'archives'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<ArticleCategory>('Tous');
   const [selectedArticle, setSelectedArticle] = useState<ArticleItem | null>(null);
-  
+
   // Audio player state for podcasts
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [activeAudioItem, setActiveAudioItem] = useState<ArticleItem | null>(null);
 
-  // Filtered list
-  const filteredArticles = mockArticles.filter((item) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'archives') return item.id === 'art-4';
-    return item.type === activeTab;
+  // Articles & Comments state
+  const [articles, setArticles] = useState<ArticleItem[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [commentAuthorName, setCommentAuthorName] = useState(currentUser?.name || '');
+  const [commentSuccess, setCommentSuccess] = useState(false);
+
+  const refreshArticlesAndComments = () => {
+    const fetchedArticles = DatabaseService.getArticles();
+    setArticles(fetchedArticles);
+  };
+
+  useEffect(() => {
+    refreshArticlesAndComments();
+  }, []);
+
+  useEffect(() => {
+    if (selectedArticle) {
+      const artComments = DatabaseService.getComments(selectedArticle.id);
+      setComments(artComments);
+    }
+  }, [selectedArticle]);
+
+  // Categories list matching user request
+  const categoryFilters: ArticleCategory[] = [
+    'Tous',
+    'Articles',
+    'WebTV',
+    'Web Radio',
+    'Archives Goutte d\'Or',
+    'Devenir bénévole',
+  ];
+
+  const filteredArticles = articles.filter((item) => {
+    if (selectedCategory === 'Tous') return true;
+    return item.category === selectedCategory || (item.type as string) === (selectedCategory as string);
   });
 
   const handlePlayPodcast = (item: ArticleItem) => {
@@ -34,63 +72,54 @@ export const MediaView: React.FC<MediaViewProps> = ({ currentLang, onOpenVolunte
     }
   };
 
+  const handleSendComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim() || !selectedArticle) return;
+
+    const authorName = currentUser?.name || commentAuthorName.trim() || 'Visiteur Goutte d’Or';
+    const newComment: Comment = {
+      id: 'com-' + Date.now(),
+      articleId: selectedArticle.id,
+      userId: currentUser?.id || 'guest-' + Date.now(),
+      authorName: authorName,
+      content: commentText.trim(),
+      date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) + ' à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      status: 'pending', // Requires admin approval!
+    };
+
+    DatabaseService.addComment(newComment);
+    setCommentText('');
+    setCommentSuccess(true);
+    setTimeout(() => setCommentSuccess(false), 5000);
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-4 sm:py-6 flex flex-col gap-6 animate-in fade-in duration-300">
-      {/* Top Banner Header matching mockup */}
+      {/* Top Banner Header */}
       <div className="w-full bg-[#C9D48D] rounded-3xl p-6 sm:p-8 border border-[#B8C57A] shadow-xs">
         <div className="flex flex-col items-center justify-center text-center">
           <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-wide uppercase">
             {t.mediaTitle}
           </h2>
+          <p className="mt-1 text-xs sm:text-sm font-bold text-[#4A1E0E]">
+            Le journal sonore, visuel et écrit des habitant.es de la Goutte d’Or
+          </p>
 
-          {/* Sub tabs in header matching Mockup Page 4 */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-6 text-xs sm:text-sm font-bold text-[#DF6847]">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`hover:text-[#BA4E30] transition-colors cursor-pointer ${
-                activeTab === 'all' ? 'underline underline-offset-4 font-black text-[#4A1E0E]' : ''
-              }`}
-            >
-              {t.allMedia}
-            </button>
-            <button
-              onClick={() => setActiveTab('Article')}
-              className={`hover:text-[#BA4E30] transition-colors cursor-pointer ${
-                activeTab === 'Article' ? 'underline underline-offset-4 font-black text-[#4A1E0E]' : ''
-              }`}
-            >
-              {t.articles}
-            </button>
-            <button
-              onClick={() => setActiveTab('Web TV')}
-              className={`hover:text-[#BA4E30] transition-colors cursor-pointer ${
-                activeTab === 'Web TV' ? 'underline underline-offset-4 font-black text-[#4A1E0E]' : ''
-              }`}
-            >
-              {t.webTv}
-            </button>
-            <button
-              onClick={() => setActiveTab('Podcast')}
-              className={`hover:text-[#BA4E30] transition-colors cursor-pointer ${
-                activeTab === 'Podcast' ? 'underline underline-offset-4 font-black text-[#4A1E0E]' : ''
-              }`}
-            >
-              {t.webRadio}
-            </button>
-            <button
-              onClick={() => setActiveTab('archives')}
-              className={`hover:text-[#BA4E30] transition-colors cursor-pointer ${
-                activeTab === 'archives' ? 'underline underline-offset-4 font-black text-[#4A1E0E]' : ''
-              }`}
-            >
-              {t.archives}
-            </button>
-            <button
-              onClick={onOpenVolunteerModal}
-              className="text-[#DF6847] hover:text-[#BA4E30] transition-colors cursor-pointer font-bold"
-            >
-              {t.becomeVolunteer}
-            </button>
+          {/* Sub tabs in header for Category Filtering */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs font-bold">
+            {categoryFilters.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-full transition-all cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-[#DF6847] text-white shadow-xs font-black'
+                    : 'bg-[#FAF7EE] text-[#4A1E0E] hover:bg-[#DF6847] hover:text-white'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -107,7 +136,7 @@ export const MediaView: React.FC<MediaViewProps> = ({ currentLang, onOpenVolunte
             </button>
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-[#C9D48D] block">
-                Radio Goutte d’Or en écoute
+                Web Radio Goutte d’Or en écoute
               </span>
               <p className="text-xs sm:text-sm font-semibold truncate max-w-xs sm:max-w-md">
                 {activeAudioItem.title}
@@ -121,7 +150,7 @@ export const MediaView: React.FC<MediaViewProps> = ({ currentLang, onOpenVolunte
                 setIsPlayingAudio(false);
                 setActiveAudioItem(null);
               }}
-              className="text-white/60 hover:text-white p-1"
+              className="text-white/60 hover:text-white p-1 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -129,123 +158,76 @@ export const MediaView: React.FC<MediaViewProps> = ({ currentLang, onOpenVolunte
         </div>
       )}
 
-      {/* 3 Featured Media Cards Grid matching Mockup Page 4 */}
+      {/* Articles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-        {/* CARD 1: Article */}
-        <div
-          onClick={() => setSelectedArticle(mockArticles[0])}
-          className="group flex flex-col cursor-pointer transition-all"
-        >
-          {/* Visual Container */}
-          <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-[#5EA3D0] shadow-sm group-hover:shadow-md transition-shadow">
-            <img
-              src="/src/assets/images/article_garcon_arabe_1790867645835.jpg"
-              alt="Les fictions du garçon arabe"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-            />
+        {filteredArticles.length === 0 ? (
+          <div className="col-span-3 text-center py-12 bg-[#F2EBD9] rounded-3xl p-6 border border-[#E4D9C3]">
+            <p className="text-sm font-bold text-[#4A1E0E]">Aucun article trouvé dans cette catégorie pour le moment.</p>
           </div>
-
-          {/* Caption / Title */}
-          <div className="mt-4">
-            <span className="font-serif text-xl sm:text-2xl font-bold text-[#DF6847] block">
-              Article
-            </span>
-            <h3 className="mt-1 text-base sm:text-lg font-bold text-[#292524] group-hover:text-[#DF6847] transition-colors leading-snug">
-              {mockArticles[0].title}
-            </h3>
-            <div className="mt-2 flex items-center gap-2 text-xs text-[#786E5D]">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{mockArticles[0].durationOrReadTime}</span>
-              <span>·</span>
-              <span>{mockArticles[0].date}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* CARD 2: Podcast */}
-        <div
-          onClick={() => handlePlayPodcast(mockArticles[1])}
-          className="group flex flex-col cursor-pointer transition-all"
-        >
-          {/* Visual Container */}
-          <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-[#1E7D48] shadow-sm group-hover:shadow-md transition-shadow">
-            <img
-              src="/src/assets/images/article_mental_health_1790867657219.jpg"
-              alt="La santé mentale inclusive"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
-            />
-            {/* Play Button Overlay */}
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-black/10 transition-colors">
-              <div className="w-14 h-14 rounded-full bg-white/95 text-[#1E7D48] shadow-lg flex items-center justify-center transform group-hover:scale-110 transition-transform">
-                {activeAudioItem?.id === mockArticles[1].id && isPlayingAudio ? (
-                  <Pause className="w-6 h-6 fill-current" />
+        ) : (
+          filteredArticles.map((article) => (
+            <div
+              key={article.id}
+              onClick={() => {
+                if (article.type === 'Podcast') {
+                  handlePlayPodcast(article);
+                } else {
+                  setSelectedArticle(article);
+                }
+              }}
+              className="group flex flex-col cursor-pointer transition-all bg-[#FAF7EE] rounded-2xl p-4 border border-[#E7DECD] hover:border-[#DF6847] hover:shadow-md"
+            >
+              {/* Media Container */}
+              <div className="relative aspect-4/3 w-full rounded-xl overflow-hidden bg-[#E4D9C8] shadow-xs group-hover:shadow-sm">
+                {article.type === 'Web TV' ? (
+                  <div className="relative w-full h-full bg-[#DF6847] flex items-center justify-center">
+                    <Film className="w-12 h-12 text-white/90" />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-white text-[#DF6847] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                        <Play className="w-5 h-5 ml-0.5 fill-current" />
+                      </div>
+                    </div>
+                  </div>
+                ) : article.image ? (
+                  <img
+                    src={article.image}
+                    alt={article.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
+                  />
                 ) : (
-                  <Play className="w-6 h-6 fill-current ml-1" />
+                  <div className="w-full h-full bg-[#284B3D] flex items-center justify-center text-white">
+                    <BookOpen className="w-12 h-12 text-[#C9D48D]" />
+                  </div>
                 )}
+
+                {/* Category Badge */}
+                <div className="absolute top-3 left-3 bg-[#DF6847] text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full shadow-xs">
+                  {article.category || article.type}
+                </div>
+              </div>
+
+              {/* Caption / Title */}
+              <div className="mt-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-[#292524] group-hover:text-[#DF6847] transition-colors leading-snug">
+                    {article.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-[#786E5D] line-clamp-2">
+                    {article.subtitle}
+                  </p>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-xs text-[#786E5D] pt-2 border-t border-[#E7DECD]">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#DF6847]" />
+                    <span>{article.durationOrReadTime}</span>
+                  </div>
+                  <span>{article.date}</span>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Caption / Title */}
-          <div className="mt-4">
-            <span className="font-serif text-xl sm:text-2xl font-bold text-[#DF6847] block">
-              Podcast
-            </span>
-            <h3 className="mt-1 text-base sm:text-lg font-bold text-[#292524] group-hover:text-[#DF6847] transition-colors leading-snug">
-              {mockArticles[1].title}
-            </h3>
-            <div className="mt-2 flex items-center gap-2 text-xs text-[#786E5D]">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{mockArticles[1].durationOrReadTime}</span>
-              <span>·</span>
-              <span>{mockArticles[1].author}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* CARD 3: Web TV */}
-        <div
-          onClick={() => setSelectedArticle(mockArticles[2])}
-          className="group flex flex-col cursor-pointer transition-all"
-        >
-          {/* Visual Container with exact graphic geometric artwork from mockup Page 4 */}
-          <div className="relative aspect-4/3 w-full rounded-2xl overflow-hidden bg-[#F2C94C] shadow-sm group-hover:shadow-md transition-shadow flex items-center justify-center">
-            <svg viewBox="0 0 400 300" className="w-full h-full">
-              <rect width="400" height="300" fill="#E8C339" />
-              {/* Overlapping large circles from mockup: yellow background with black and red lenses */}
-              <circle cx="120" cy="150" r="105" fill="#1A1A1A" />
-              <circle cx="280" cy="150" r="105" fill="#1A1A1A" />
-              <ellipse cx="200" cy="150" rx="60" ry="95" fill="#E04828" />
-              <ellipse cx="120" cy="150" rx="35" ry="55" fill="#E04828" opacity="0.9" />
-              <ellipse cx="280" cy="150" rx="35" ry="55" fill="#E04828" opacity="0.9" />
-            </svg>
-
-            {/* Play Button Overlay */}
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-black/10 transition-colors">
-              <div className="w-14 h-14 rounded-full bg-white/95 text-[#E04828] shadow-lg flex items-center justify-center transform group-hover:scale-110 transition-transform">
-                <Film className="w-6 h-6 ml-0.5" />
-              </div>
-            </div>
-          </div>
-
-          {/* Caption / Title */}
-          <div className="mt-4">
-            <span className="font-serif text-xl sm:text-2xl font-bold text-[#DF6847] block">
-              Web TV
-            </span>
-            <h3 className="mt-1 text-base sm:text-lg font-bold text-[#292524] group-hover:text-[#DF6847] transition-colors leading-snug">
-              {mockArticles[2].title}
-            </h3>
-            <div className="mt-2 flex items-center gap-2 text-xs text-[#786E5D]">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{mockArticles[2].durationOrReadTime}</span>
-              <span>·</span>
-              <span>{mockArticles[2].author}</span>
-            </div>
-          </div>
-        </div>
+          ))
+        )}
       </div>
 
       {/* Reader Modal when clicking an article or Web TV */}
@@ -259,13 +241,13 @@ export const MediaView: React.FC<MediaViewProps> = ({ currentLang, onOpenVolunte
               <X className="w-4 h-4" />
             </button>
 
-            <span className="font-serif text-xl font-bold text-[#DF6847]">
-              {selectedArticle.type}
+            <span className="font-serif text-sm font-bold text-[#DF6847] uppercase tracking-wider">
+              {selectedArticle.category || selectedArticle.type}
             </span>
             <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-black text-[#4A1E0E] leading-tight">
               {selectedArticle.title}
             </h2>
-            <p className="mt-2 text-sm text-[#786E5D] font-medium">
+            <p className="mt-2 text-xs text-[#786E5D] font-medium">
               Par {selectedArticle.author} · {selectedArticle.date} · {selectedArticle.durationOrReadTime}
             </p>
 
@@ -275,12 +257,12 @@ export const MediaView: React.FC<MediaViewProps> = ({ currentLang, onOpenVolunte
                 <video
                   controls
                   className="w-full h-full object-cover"
-                  src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                  src={selectedArticle.videoUrl || "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"}
                 />
               </div>
             )}
 
-            {selectedArticle.image && (
+            {selectedArticle.image && selectedArticle.type !== 'Web TV' && (
               <div className="mt-4 rounded-2xl overflow-hidden max-h-64">
                 <img
                   src={selectedArticle.image}
@@ -298,35 +280,67 @@ export const MediaView: React.FC<MediaViewProps> = ({ currentLang, onOpenVolunte
             <div className="mt-8 pt-6 border-t border-[#E3D9C4]">
               <h4 className="text-sm font-bold text-[#4A1E0E] flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-[#DF6847]" />
-                <span>Réactions citoyennes (2)</span>
+                <span>Réactions des lecteurs ({comments.length})</span>
               </h4>
 
+              {commentSuccess && (
+                <div className="mt-3 p-3 bg-emerald-100 border border-emerald-300 rounded-xl text-emerald-800 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Merci ! Votre commentaire a été enregistré et sera publié dès validation par un administrateur.</span>
+                </div>
+              )}
+
               <div className="mt-3 space-y-3">
-                <div className="bg-[#F2EBD9] p-3 rounded-xl text-xs text-[#4A1E0E]">
-                  <span className="font-bold block">Amina (habitant rue Myrha)</span>
-                  <span className="text-[#6C604F]">« Merci pour cet article qui remet les pendules à l'heure avec beaucoup de nuance et de chaleur. »</span>
-                </div>
-                <div className="bg-[#F2EBD9] p-3 rounded-xl text-xs text-[#4A1E0E]">
-                  <span className="font-bold block">Karim (animateur jeunesse)</span>
-                  <span className="text-[#6C604F]">« Nous allons faire lire cet article aux jeunes de l'atelier média dès mercredi prochain ! »</span>
-                </div>
+                {comments.length === 0 ? (
+                  <p className="text-xs text-[#786E5D] italic">Aucun commentaire publié pour l'instant. Soyez le premier à réagir !</p>
+                ) : (
+                  comments.map((comm) => (
+                    <div key={comm.id} className="bg-[#F2EBD9] p-3 rounded-xl text-xs text-[#4A1E0E]">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold">{comm.authorName}</span>
+                        <span className="text-[10px] text-[#786E5D]">{comm.date}</span>
+                      </div>
+                      <p className="text-[#4A1E0E] font-medium">« {comm.content} »</p>
+                    </div>
+                  ))
+                )}
               </div>
 
-              {/* Add comment input */}
-              <div className="mt-4 flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Laisser un commentaire ou témoignage..."
-                  className="flex-1 bg-white border border-[#D5C9B3] rounded-full px-4 py-2 text-xs text-[#292524] focus:outline-none focus:border-[#DF6847]"
-                />
-                <button
-                  onClick={() => alert("Merci pour votre contribution ! Le commentaire sera publié après modération citoyenne.")}
-                  className="bg-[#DF6847] hover:bg-[#BA4E30] text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Envoyer</span>
-                </button>
-              </div>
+              {/* Add comment input form */}
+              <form onSubmit={handleSendComment} className="mt-4 space-y-2">
+                {!currentUser && (
+                  <div>
+                    <input
+                      type="text"
+                      required
+                      value={commentAuthorName}
+                      onChange={(e) => setCommentAuthorName(e.target.value)}
+                      placeholder="Votre nom / pseudo..."
+                      className="w-full bg-white border border-[#D5C9B3] rounded-xl px-4 py-2 text-xs text-[#292524] outline-none focus:border-[#DF6847]"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Laisser un commentaire ou réagir..."
+                    className="flex-1 bg-white border border-[#D5C9B3] rounded-full px-4 py-2 text-xs text-[#292524] focus:outline-none focus:border-[#DF6847]"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-[#DF6847] hover:bg-[#BA4E30] text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Envoyer</span>
+                  </button>
+                </div>
+                <p className="text-[10px] text-[#786E5D]">
+                  🔒 Les commentaires sont soumis à la modération d'un administrateur avant publication.
+                </p>
+              </form>
             </div>
           </div>
         </div>
