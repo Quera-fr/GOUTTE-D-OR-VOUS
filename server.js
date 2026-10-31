@@ -292,6 +292,16 @@ app.get('/api/comments', (req, res) => {
   }
 });
 
+// Serve static assets from src/assets and public
+const srcAssetsPath = path.join(__dirname, 'src', 'assets');
+const publicPath = path.join(__dirname, 'public');
+
+app.use('/src/assets', express.static(srcAssetsPath));
+app.use('/assets', express.static(srcAssetsPath));
+if (fs.existsSync(publicPath)) {
+  app.use(express.static(publicPath));
+}
+
 // Serve static files from dist in production
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));

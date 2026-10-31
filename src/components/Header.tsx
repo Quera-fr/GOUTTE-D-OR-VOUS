@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Language, ActiveView, User } from '../types';
 import { translations } from '../data/translations';
-import { Compass, Globe, ChevronDown, User as UserIcon, Shield, LogOut, Building } from 'lucide-react';
+import { Globe, ChevronDown, User as UserIcon, Shield, LogOut, Building } from 'lucide-react';
 
 interface HeaderProps {
   currentLang: Language;
@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const languages: { code: Language; label: string }[] = [
     { code: 'fr', label: 'Français' },
-    { code: 'en', label: 'Anglais' },
+    { code: 'en', label: 'English' },
     { code: 'ar', label: 'Arabe' },
     { code: 'uk', label: 'Ukrainien' },
     { code: 'ps', label: 'Pashto' },
@@ -45,16 +45,6 @@ export const Header: React.FC<HeaderProps> = ({
             }}
             className="flex items-center gap-2 group text-left cursor-pointer"
           >
-            {/* Stamp Logo Badge */}
-            <div className="relative flex flex-col items-center justify-center bg-[#DF6847] text-[#FAF7EE] px-2.5 py-1 rounded-md shadow-xs transition-transform group-hover:scale-105 border border-[#B94E31]">
-              <span className="text-[10px] font-bold tracking-tight uppercase leading-none">Goutte</span>
-              <div className="flex items-center gap-0.5 leading-none">
-                <span className="text-[9px] text-[#F9DE96] font-black">&</span>
-                <span className="text-[10px] font-black tracking-tighter">D'OR</span>
-              </div>
-              <span className="text-[10px] font-bold tracking-tight uppercase leading-none">Vous</span>
-            </div>
-
             <div>
               <span className="font-serif text-lg md:text-xl font-bold tracking-tight text-[#4A1E0E] group-hover:text-[#DF6847] transition-colors block leading-tight">
                 {t.appName}
@@ -128,24 +118,8 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
         )}
 
-        {/* Actions, Auth & Language Switcher (Order: Compass | Language | Auth/Account) */}
+        {/* Actions, Auth & Language Switcher (Order: Language | Auth/Account) */}
         <div className="flex items-center gap-2">
-          {/* Compass / Hero view toggle */}
-          <a
-            href={activeView === 'hero' ? '/' : '/boussole'}
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigate(activeView === 'hero' ? 'home' : 'hero');
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[#5C5042] hover:text-[#4A1E0E] bg-[#F2EBD9] hover:bg-[#EBE2CD] rounded-full transition-colors cursor-pointer"
-            title={activeView === 'hero' ? t.backToHome : t.backToHero}
-          >
-            <Compass className="w-4 h-4 text-[#DF6847]" />
-            <span className="hidden sm:inline">
-              {activeView === 'hero' ? t.backToHome : 'Boussole'}
-            </span>
-          </a>
-
           {/* Language Selector Dropdown */}
           <div className="relative">
             <button
@@ -184,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Auth / Account Button (Placed next to Boussole and Langue) */}
+          {/* Auth / Account Button */}
           <div className="relative">
             {currentUser ? (
               <button
@@ -281,4 +255,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-
