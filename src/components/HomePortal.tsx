@@ -51,8 +51,12 @@ export const HomePortal: React.FC<HomePortalProps> = ({
       {/* The 4 Iconic Section Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
         {/* 1. LE MÉDIA */}
-        <button
-          onClick={() => onNavigate('media')}
+        <a
+          href="/le-media"
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate('media');
+          }}
           className="group relative flex flex-col justify-between bg-[#4A1E0E] text-[#FAF7EE] p-6 sm:p-8 rounded-3xl min-h-[310px] shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 text-left cursor-pointer border border-[#3A160A]"
         >
           {/* Sketch Icon: Radio */}
@@ -91,11 +95,15 @@ export const HomePortal: React.FC<HomePortalProps> = ({
           <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-[#F9DE96]">
             <ArrowUpRight className="w-6 h-6" />
           </div>
-        </button>
+        </a>
 
         {/* 2. L'AGENDA */}
-        <button
-          onClick={() => onNavigate('agenda')}
+        <a
+          href="/agenda"
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate('agenda');
+          }}
           className="group relative flex flex-col justify-between bg-[#DF6847] text-white p-6 sm:p-8 rounded-3xl min-h-[310px] shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 text-left cursor-pointer border border-[#C55738]"
         >
           {/* Sketch Icon: Calendar Pad */}
@@ -141,11 +149,15 @@ export const HomePortal: React.FC<HomePortalProps> = ({
           <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-[#FCECD1]">
             <ArrowUpRight className="w-6 h-6" />
           </div>
-        </button>
+        </a>
 
         {/* 3. L'ANNUAIRE */}
-        <button
-          onClick={() => onNavigate('annuaire')}
+        <a
+          href="/annuaire"
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate('annuaire');
+          }}
           className="group relative flex flex-col justify-between bg-[#284B3D] text-[#FAF7EE] p-6 sm:p-8 rounded-3xl min-h-[310px] shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 text-left cursor-pointer border border-[#1E3B30]"
         >
           {/* Sketch Icon: Directory Notebook */}
@@ -178,11 +190,15 @@ export const HomePortal: React.FC<HomePortalProps> = ({
           <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-[#C9D48D]">
             <ArrowUpRight className="w-6 h-6" />
           </div>
-        </button>
+        </a>
 
         {/* 4. L'ESPACE AGIR */}
-        <button
-          onClick={() => onNavigate('agir')}
+        <a
+          href="/espace-agir"
+          onClick={(e) => {
+            e.preventDefault();
+            onNavigate('agir');
+          }}
           className="group relative flex flex-col justify-between bg-[#F05727] text-white p-6 sm:p-8 rounded-3xl min-h-[310px] shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 text-left cursor-pointer border border-[#D54519]"
         >
           {/* Sketch Icon: Megaphone */}
@@ -215,7 +231,7 @@ export const HomePortal: React.FC<HomePortalProps> = ({
           <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity text-[#FDE68A]">
             <ArrowUpRight className="w-6 h-6" />
           </div>
-        </button>
+        </a>
       </div>
     </div>
   );

@@ -35,10 +35,14 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="w-full bg-[#FAF7EE] border-b border-[#E7DECD] sticky top-0 z-40 px-4 md:px-8 py-3 transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand Lockup (No 'retour à l'accueil' button as requested) */}
+        {/* Brand Lockup */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => onNavigate('home')}
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate('home');
+            }}
             className="flex items-center gap-2 group text-left cursor-pointer"
           >
             {/* Stamp Logo Badge */}
@@ -59,14 +63,18 @@ export const Header: React.FC<HeaderProps> = ({
                 {t.tagline}
               </span>
             </div>
-          </button>
+          </a>
         </div>
 
         {/* Navigation Quick Links on larger screens */}
         {activeView !== 'hero' && (
           <nav className="hidden lg:flex items-center gap-1 bg-[#F2EBD9] p-1 rounded-full border border-[#E4D9C3]">
-            <button
-              onClick={() => onNavigate('media')}
+            <a
+              href="/le-media"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('media');
+              }}
               className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
                 activeView === 'media'
                   ? 'bg-[#4A1E0E] text-[#FAF7EE] shadow-xs'
@@ -74,9 +82,13 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               {t.mediaTitle}
-            </button>
-            <button
-              onClick={() => onNavigate('agenda')}
+            </a>
+            <a
+              href="/agenda"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('agenda');
+              }}
               className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
                 activeView === 'agenda'
                   ? 'bg-[#DF6847] text-white shadow-xs'
@@ -84,9 +96,13 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               {t.agendaTitle}
-            </button>
-            <button
-              onClick={() => onNavigate('annuaire')}
+            </a>
+            <a
+              href="/annuaire"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('annuaire');
+              }}
               className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
                 activeView === 'annuaire'
                   ? 'bg-[#284B3D] text-[#FAF7EE] shadow-xs'
@@ -94,9 +110,13 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               {t.annuaireTitle}
-            </button>
-            <button
-              onClick={() => onNavigate('agir')}
+            </a>
+            <a
+              href="/espace-agir"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate('agir');
+              }}
               className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer ${
                 activeView === 'agir'
                   ? 'bg-[#F05727] text-white shadow-xs'
@@ -104,15 +124,19 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               {t.agirTitle}
-            </button>
+            </a>
           </nav>
         )}
 
         {/* Actions, Auth & Language Switcher (Order: Compass | Language | Auth/Account) */}
         <div className="flex items-center gap-2">
           {/* Compass / Hero view toggle */}
-          <button
-            onClick={() => onNavigate(activeView === 'hero' ? 'home' : 'hero')}
+          <a
+            href={activeView === 'hero' ? '/' : '/boussole'}
+            onClick={(e) => {
+              e.preventDefault();
+              onNavigate(activeView === 'hero' ? 'home' : 'hero');
+            }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[#5C5042] hover:text-[#4A1E0E] bg-[#F2EBD9] hover:bg-[#EBE2CD] rounded-full transition-colors cursor-pointer"
             title={activeView === 'hero' ? t.backToHome : t.backToHero}
           >
@@ -120,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">
               {activeView === 'hero' ? t.backToHome : 'Boussole'}
             </span>
-          </button>
+          </a>
 
           {/* Language Selector Dropdown */}
           <div className="relative">
@@ -181,13 +205,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
             ) : (
-              <button
-                onClick={() => onNavigate('login')}
+              <a
+                href="/connexion"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('login');
+                }}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#FAF7EE] bg-[#4A1E0E] hover:bg-[#DF6847] rounded-full transition-all cursor-pointer shadow-xs"
               >
                 <UserIcon className="w-3.5 h-3.5" />
                 <span>Connexion / Inscription</span>
-              </button>
+              </a>
             )}
 
             {/* User Profile Dropdown Menu */}
@@ -207,8 +235,10 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
+                <a
+                  href="/mon-compte"
+                  onClick={(e) => {
+                    e.preventDefault();
                     onNavigate('myAccount');
                     setUserMenuOpen(false);
                   }}
@@ -216,11 +246,13 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <UserIcon className="w-4 h-4 text-[#284B3D]" />
                   <span>Mon Compte</span>
-                </button>
+                </a>
 
                 {currentUser.role === 'admin' && (
-                  <button
-                    onClick={() => {
+                  <a
+                    href="/admin"
+                    onClick={(e) => {
+                      e.preventDefault();
                       onNavigate('admin');
                       setUserMenuOpen(false);
                     }}
@@ -228,7 +260,7 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <Shield className="w-4 h-4 text-[#DF6847]" />
                     <span>Espace Administration</span>
-                  </button>
+                  </a>
                 )}
 
                 <button

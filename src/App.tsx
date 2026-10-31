@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ActiveView, Language, User } from './types';
+import { getViewFromPath, getPathFromView } from './utils/router';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HeroScreen } from './components/HeroScreen';
@@ -20,8 +21,29 @@ import { Modals } from './components/Modals';
 
 export default function App() {
   const [currentLang, setCurrentLang] = useState<Language>('fr');
-  const [activeView, setActiveView] = useState<ActiveView>('home');
+  const [activeView, setActiveView] = useState<ActiveView>(() => {
+    return getViewFromPath(window.location.pathname);
+  });
   const [targetEventId, setTargetEventId] = useState<string | null>(null);
+
+  // Synchronize state when browser navigation (back / forward) happens
+  useEffect(() => {
+    const handlePopState = () => {
+      setActiveView(getViewFromPath(window.location.pathname));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Navigation handler updating URL path and state
+  const handleNavigate = useCallback((view: ActiveView) => {
+    const targetPath = getPathFromView(view);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+    setActiveView(view);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // User Authentication state with localStorage persistence
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -48,18 +70,18 @@ export default function App() {
     setCurrentUser(user);
     localStorage.setItem('goutte_dor_current_user', JSON.stringify(user));
     if (user.role === 'admin') {
-      setActiveView('admin');
+      handleNavigate('admin');
     } else if (user.role === 'association') {
-      setActiveView('myAccount');
+      handleNavigate('myAccount');
     } else {
-      setActiveView('home');
+      handleNavigate('home');
     }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('goutte_dor_current_user');
-    setActiveView('home');
+    handleNavigate('home');
   };
 
   const handleUpdateUser = (updatedUser: User) => {
@@ -69,7 +91,7 @@ export default function App() {
 
   const handleOpenFeaturedEvent = (eventId: string) => {
     setTargetEventId(eventId);
-    setActiveView('agenda');
+    handleNavigate('agenda');
   };
 
   return (
@@ -79,7 +101,7 @@ export default function App() {
         currentLang={currentLang}
         onSelectLang={setCurrentLang}
         activeView={activeView}
-        onNavigate={setActiveView}
+        onNavigate={handleNavigate}
         currentUser={currentUser}
         onLogout={handleLogout}
       />

@@ -188,6 +188,21 @@ async function main() {
 
   saveDatabase();
 
+  // Serve static files from dist in production
+  app.use(express.static(path.join(__dirname, 'dist')));
+
+  // SPA routing fallback to index.html for non-API routes
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      const indexPath = path.join(__dirname, 'dist', 'index.html');
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(404).send('Not found');
+      }
+    }
+  });
+
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(`SQLite API Server running on port ${PORT}`);
@@ -195,3 +210,4 @@ async function main() {
 }
 
 main().catch(console.error);
+
